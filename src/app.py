@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import numpy as np
 from tensorflow.keras.models import load_model
-from PIL import Image, ImageTk, ImageOps, ImageGrab
+from PIL import Image, ImageTk, ImageOps, ImageDraw
 import os
 
 # Define the base directory and model path
@@ -88,17 +88,23 @@ def upload_image():
 
 # Function to handle drawing and prediction
 def predict_drawing():
-    # Capture the canvas as an image
-    x = drawing_window.winfo_rootx() + canvas.winfo_x()
-    y = drawing_window.winfo_rooty() + canvas.winfo_y()
-    x1 = x + canvas.winfo_width()
-    y1 = y + canvas.winfo_height()
-    img = ImageGrab.grab(bbox=(x, y, x1, y1))
+    # Create a blank image with the same size as the canvas
+    img = Image.new("RGB", (canvas.winfo_width(), canvas.winfo_height()), "white")
+    draw = ImageDraw.Draw(img)
 
-    # Convert the image to grayscale and resize it
-    img = img.convert("L").resize((64, 64), Image.Resampling.LANCZOS)
+    # Get all drawn items from the canvas
+    for item in canvas.find_all():
+        # Get the coordinates of the item
+        coords = canvas.coords(item)
+        # Get the color of the item
+        color = canvas.itemcget(item, "fill")
+        # Draw the item on the Pillow image
+        if canvas.type(item) == "oval":
+            draw.ellipse(coords, fill=color, outline=color)
+        elif canvas.type(item) == "line":
+            draw.line(coords, fill=color, width=int(canvas.itemcget(item, "width")))
 
-    # Save the image temporarily for debugging
+    # Save the drawn image temporarily
     temp_image_path = os.path.join(temp_image_folder, "drawing.png")
     img.save(temp_image_path)
 
@@ -110,13 +116,69 @@ def predict_drawing():
         fg="#4CAF50"  # Green color
     )
 
-    # Optionally, delete the temporary image file after prediction
-    os.remove(temp_image_path)
-
 # Function to clear the canvas
 def clear_canvas():
     canvas.delete("all")
     result_label.config(text="")
+
+# Function to draw on the canvas
+def paint(event):
+    # Increase the stroke width to make the lines bolder
+    stroke_width = 8  # Adjust this value to match the training data
+    x1, y1 = (event.x - stroke_width), (event.y - stroke_width)
+    x2, y2 = (event.x + stroke_width), (event.y + stroke_width)
+    canvas.create_oval(x1, y1, x2, y2, fill="black", outline="black", width=stroke_width)
+
+# Function to open the drawing window
+def open_drawing_window():
+    global drawing_window, canvas
+    drawing_window = tk.Toplevel(root)
+    drawing_window.title("Draw Tifinagh Character")
+    drawing_window.geometry("300x350")  # Adjusted height to fit buttons
+    drawing_window.configure(bg="#f0f0f0")
+
+    # Create a canvas for drawing
+    canvas = tk.Canvas(drawing_window, bg="white", width=280, height=280)
+    canvas.pack(pady=10)
+
+    # Bind mouse events to draw on the canvas
+    canvas.bind("<B1-Motion>", paint)
+
+    # Create a frame for buttons
+    drawing_button_frame = tk.Frame(drawing_window, bg="#f0f0f0")
+    drawing_button_frame.pack(pady=10)
+
+    # Create a button to predict the drawing
+    predict_button = tk.Button(
+        drawing_button_frame,
+        text="Predict",
+        command=predict_drawing,
+        font=custom_font,
+        bg="#4CAF50",  # Green color
+        fg="white",
+        padx=20,
+        pady=10,
+        bd=0,
+        relief=tk.FLAT,
+        activebackground="#45a049"  # Darker green when pressed
+    )
+    predict_button.pack(side=tk.LEFT, padx=10)
+
+    # Create a button to clear the canvas
+    clear_button = tk.Button(
+        drawing_button_frame,
+        text="Clear",
+        command=clear_canvas,
+        font=custom_font,
+        bg="#f44336",  # Red color
+        fg="white",
+        padx=20,
+        pady=10,
+        bd=0,
+        relief=tk.FLAT,
+        activebackground="#e53935"  # Darker red when pressed
+    )
+    clear_button.pack(side=tk.LEFT, padx=10)
 
 # Create the main window
 root = tk.Tk()
@@ -196,65 +258,6 @@ footer_label = tk.Label(
     bg="#f0f0f0"
 )
 footer_label.pack(side=tk.BOTTOM, pady=10)
-
-# Function to open the drawing window
-def open_drawing_window():
-    global drawing_window, canvas
-    drawing_window = tk.Toplevel(root)
-    drawing_window.title("Draw Tifinagh Character")
-    drawing_window.geometry("300x350")  # Adjusted height to fit buttons
-    drawing_window.configure(bg="#f0f0f0")
-
-    # Create a canvas for drawing
-    canvas = tk.Canvas(drawing_window, bg="white", width=280, height=280)
-    canvas.pack(pady=10)
-
-    # Bind mouse events to draw on the canvas
-    canvas.bind("<B1-Motion>", paint)
-
-    # Create a frame for buttons
-    drawing_button_frame = tk.Frame(drawing_window, bg="#f0f0f0")
-    drawing_button_frame.pack(pady=10)
-
-    # Create a button to predict the drawing
-    predict_button = tk.Button(
-        drawing_button_frame,
-        text="Predict",
-        command=predict_drawing,
-        font=custom_font,
-        bg="#4CAF50",  # Green color
-        fg="white",
-        padx=20,
-        pady=10,
-        bd=0,
-        relief=tk.FLAT,
-        activebackground="#45a049"  # Darker green when pressed
-    )
-    predict_button.pack(side=tk.LEFT, padx=10)
-
-    # Create a button to clear the canvas
-    clear_button = tk.Button(
-        drawing_button_frame,
-        text="Clear",
-        command=clear_canvas,
-        font=custom_font,
-        bg="#f44336",  # Red color
-        fg="white",
-        padx=20,
-        pady=10,
-        bd=0,
-        relief=tk.FLAT,
-        activebackground="#e53935"  # Darker red when pressed
-    )
-    clear_button.pack(side=tk.LEFT, padx=10)
-
-# Function to draw on the canvas
-def paint(event):
-    # Increase the stroke width to make the lines bolder
-    stroke_width = 10  # Adjust this value to make the strokes thicker
-    x1, y1 = (event.x - stroke_width), (event.y - stroke_width)
-    x2, y2 = (event.x + stroke_width), (event.y + stroke_width)
-    canvas.create_oval(x1, y1, x2, y2, fill="black", outline="black", width=stroke_width)
 
 # Run the Tkinter event loop
 root.mainloop()
