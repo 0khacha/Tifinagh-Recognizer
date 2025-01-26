@@ -1,0 +1,205 @@
+characters = {
+    '0': ('ⴰ', 'a'),    # Folder 0 contains images of "ⴰ" (a)
+    '1': ('ⴱ', 'b'),    # Folder 1 contains images of "ⴱ" (b)
+    '2': ('ⵛ', 'ch'),   # Folder 2 contains images of "ⵛ" (ch)
+    '3': ('ⴷ', 'd'),    # Folder 3 contains images of "ⴷ" (d)
+    '4': ('ⴻ', 'e'),    # Folder 4 contains images of "ⴻ" (e)
+    '5': ('ⴼ', 'f'),    # Folder 5 contains images of "ⴼ" (f)
+    '6': ('ⴳ', 'g'),    # Folder 6 contains images of "ⴳ" (g)
+    '7': ('ⵀ', 'h'),    # Folder 7 contains images of "ⵀ" (h)
+    '8': ('ⵉ', 'i'),    # Folder 8 contains images of "ⵉ" (i)
+    '9': ('ⵊ', 'j'),    # Folder 9 contains images of "ⵊ" (j)
+    '10': ('ⴽ', 'k'),   # Folder 10 contains images of "ⴽ" (k)
+    '11': ('ⵍ', 'l'),   # Folder 11 contains images of "ⵍ" (l)
+    '12': ('ⵎ', 'm'),   # Folder 12 contains images of "ⵎ" (m)
+    '13': ('ⵏ', 'n'),   # Folder 13 contains images of "ⵏ" (n)
+    '14': ('ⵇ', 'q'),   # Folder 14 contains images of "ⵇ" (q)
+    '15': ('ⵔ', 'r'),   # Folder 15 contains images of "ⵔ" (r)
+    '16': ('ⵙ', 's'),   # Folder 16 contains images of "ⵙ" (s)
+    '17': ('ⵜ', 't'),   # Folder 17 contains images of "ⵜ" (t)
+    '18': ('ⵓ', 'u'),   # Folder 18 contains images of "ⵓ" (u)
+    '19': ('ⵡ', 'w'),   # Folder 19 contains images of "ⵡ" (w)
+    '20': ('ⵅ', 'kh'),  # Folder 20 contains images of "ⵅ" (kh)
+    '21': ('ⵢ', 'y'),   # Folder 21 contains images of "ⵢ" (y)
+    '22': ('ⵣ', 'z'),   # Folder 22 contains images of "ⵣ" (z)
+    '23': ('ⵃ', 'ḥ'),   # Folder 23 contains images of "ⵃ" (ḥ)
+    '24': ('ⵚ', 'ṣ'),   # Folder 24 contains images of "ⵚ" (ṣ)
+    '25': ('ⴹ', 'ḍ'),   # Folder 25 contains images of "ⴹ" (ḍ)
+    '26': ('ⵟ', 'ṭ'),   # Folder 26 contains images of "ⵟ" (ṭ)
+    '27': ('ⵄ', 'ɛ'),   # Folder 27 contains images of "ⵄ" (ɛ)
+    '28': ('ⵖ', 'ɣ'),   # Folder 28 contains images of "ⵖ" (ɣ)
+    '29': ('ⵥ', 'ẓ'),   # Folder 29 contains images of "ⵥ" (ẓ)
+    '30': ('ⴳⵯ', 'gw'), # Folder 30 contains images of "ⴳⵯ" (gw)
+    '31': ('ⴽⵯ', 'kw'), # Folder 31 contains images of "ⴽⵯ" (kw)
+    '32': ('ⵕ', 'ṛ')    # Folder 32 contains images of "ⵕ" (ṛ)
+}
+
+
+
+
+
+
+
+
+import os
+import pandas as pd
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
+import numpy as np
+from tensorflow.keras import layers, models
+from sklearn.model_selection import train_test_split
+
+# Function to load images and labels from metadata
+def load_all_images(metadata):
+    """
+    Load images and labels from the metadata.
+
+    Args:
+        metadata (pd.DataFrame): Metadata containing image paths and labels.
+
+    Returns:
+        images (np.array): Array of loaded images.
+        labels (np.array): Array of corresponding labels.
+    """
+    images = []
+    labels = []
+    missing_images = []  # Track missing images for debugging
+    
+    for index, row in metadata.iterrows():
+        # Construct the image path
+        folder_name = str(row['folder'])  # Use folder name as is (e.g., 0, 1, 2, ..., 32)
+        image_path = os.path.join('Tifinagh-MNIST', folder_name, row['filename'])
+        
+        # Debug: Print the image path being checked
+        print(f"Checking image: {image_path}")
+        
+        if os.path.exists(image_path):
+            # Debug: Print the image path being loaded
+            print(f"Loading image: {image_path}")
+            
+            try:
+                # Load image in grayscale and resize to 128x128
+                image = load_img(image_path, color_mode='grayscale', target_size=(128, 128))
+                
+                # Convert image to numpy array and normalize pixel values
+                image = img_to_array(image) / 255.0
+                
+                # Append the image and label to the lists
+                images.append(image)
+                labels.append(row['tifinagh_char'])
+            except Exception as e:
+                # Debug: Print if there's an error loading the image
+                print(f"Error loading image {image_path}: {e}")
+                missing_images.append(image_path)
+        else:
+            # Debug: Print if the image is not found
+            print(f"Image not found: {image_path}")
+            missing_images.append(image_path)
+    
+    # Convert lists to numpy arrays
+    if len(images) > 0:
+        images = np.array(images)
+        labels = np.array(labels)
+    else:
+        images = np.array([])
+        labels = np.array([])
+    
+    # Print missing images for debugging
+    if missing_images:
+        print(f"\nTotal missing images: {len(missing_images)}")
+        print("Sample missing paths:")
+        for path in missing_images[:10]:  # Print first 10 missing paths
+            print(path)
+    
+    return images, labels
+
+# Define the CNN model
+def create_model(input_shape, num_classes):
+    model = models.Sequential([
+        # First convolutional layer
+        layers.Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
+        layers.MaxPooling2D((2, 2)),
+        
+        # Second convolutional layer
+        layers.Conv2D(64, (3, 3), activation='relu'),
+        layers.MaxPooling2D((2, 2)),
+        
+        # Third convolutional layer
+        layers.Conv2D(128, (3, 3), activation='relu'),
+        layers.MaxPooling2D((2, 2)),
+        
+        # Flatten the output
+        layers.Flatten(),
+        
+        # Fully connected layers
+        layers.Dense(128, activation='relu'),
+        layers.Dropout(0.5),  # Dropout for regularization
+        layers.Dense(num_classes, activation='softmax')  # Output layer
+    ])
+    
+    return model
+
+# Compile and train the model
+def train_model(images, labels, num_classes):
+    # Split the data into training and validation sets
+    X_train, X_val, y_train, y_val = train_test_split(images, labels, test_size=0.2, random_state=42)
+    
+    # Define the input shape and create the model
+    input_shape = X_train.shape[1:]  # (128, 128, 1)
+    model = create_model(input_shape, num_classes)
+    
+    # Compile the model
+    model.compile(optimizer='adam',
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
+    
+    # Print the model summary
+    model.summary()
+    
+    # Train the model
+    history = model.fit(X_train, y_train,
+                        epochs=20,
+                        batch_size=32,
+                        validation_data=(X_val, y_val))
+    
+    return model, history
+
+# Main function
+def main():
+    # Load metadata from the single dataset
+    metadata_path = 'metadatatifinagh_dataset.csv'
+    if not os.path.exists(metadata_path):
+        raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
+    
+    metadata = pd.read_csv(metadata_path)  # Single dataset metadata
+    
+    # Ensure the metadata has the required columns
+    required_columns = ['folder', 'filename', 'tifinagh_char']
+    if not all(col in metadata.columns for col in required_columns):
+        raise ValueError(f"Metadata must contain the following columns: {required_columns}")
+    
+    # Load images from the metadata
+    images, labels = load_all_images(metadata)
+    
+    # Check if images were loaded
+    if len(images) == 0:
+        print("Warning: No images loaded from the dataset.")
+        return
+    
+    # Convert labels to integers for training
+    unique_labels = np.unique(labels)
+    label_to_index = {label: idx for idx, label in enumerate(unique_labels)}
+    labels = np.array([label_to_index[label] for label in labels])
+    
+    # Number of unique classes
+    num_classes = len(label_to_index)
+    
+    # Train the model
+    model, history = train_model(images, labels, num_classes)
+    
+    # Save the model
+    model.save('tifinagh_cnn_model.h5')
+    print("Model saved as 'tifinagh_cnn_model.h5'.")
+
+# Run the main function
+if __name__ == "__main__":
+    main()

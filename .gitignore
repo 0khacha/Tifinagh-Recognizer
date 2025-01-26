@@ -1,0 +1,16 @@
+# Ignore Python virtual environment
+myenv/
+
+# Ignore compiled Python files
+__pycache__/
+
+# Ignore system files
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore environment variables
+.env
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
